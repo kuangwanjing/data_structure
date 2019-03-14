@@ -11,6 +11,7 @@ void m_right_rotation(m_tree_t *);
 void m_left_rotation(m_tree_t *);
 int insert_endpoints(m_tree_t *, int);
 int update_interval(m_tree_t *, int, int, int);
+void measure(m_tree_t *);
 
 m_tree_t * m_get_node() {
     m_tree_t * tmp;
@@ -66,6 +67,9 @@ void release_endpoints(m_object_t * object) {
 }
 
 void insert_interval(m_tree_t *tree, int a, int b) {
+    if (a >= b) {
+        return;
+    }
     insert_endpoints(tree, a);
     insert_endpoints(tree, b);
     update_interval(tree, a, b, 0);
@@ -111,6 +115,7 @@ int insert_endpoints(m_tree_t *tree, int endpoint) {
         if(old_leaf->key < endpoint) {   
             old_leaf->left_endpoint = tree->left_endpoint;
             old_leaf->right_endpoint = endpoint;
+            measure(old_leaf);
             new_leaf->left_endpoint = endpoint;
             new_leaf->right_endpoint = tree->right_endpoint;
             tree->key = endpoint;
@@ -119,6 +124,7 @@ int insert_endpoints(m_tree_t *tree, int endpoint) {
         } else {   
             old_leaf->left_endpoint = tree->key;
             old_leaf->right_endpoint = tree->right_endpoint;
+            measure(old_leaf);
             new_leaf->left_endpoint = tree->left_endpoint;
             new_leaf->right_endpoint = tree->key;
             tree->left = new_leaf;
@@ -185,6 +191,9 @@ void m_left_rotation(m_tree_t* n) {
     n->left->key = tmp_key;
     n->left->left_endpoint = n->left_endpoint;
     n->left->right_endpoint = n->key;
+    measure(n->left);
+    measure(n->right);
+    measure(n);
 }
 
 void m_right_rotation(m_tree_t *n) {  
@@ -200,6 +209,9 @@ void m_right_rotation(m_tree_t *n) {
     n->right->key = tmp_key;
     n->right->left_endpoint = n->key;
     n->right->right_endpoint = n->right_endpoint;
+    measure(n->left);
+    measure(n->right);
+    measure(n);
 }
 
 int update_interval(m_tree_t *tree, int cur, int other, int op) {
@@ -231,9 +243,43 @@ int update_interval(m_tree_t *tree, int cur, int other, int op) {
                 _delete(object->right_endpoints, cur, NULL);
             }
         }
+        measure(tree);
+        return (0);
+    }
+    if (cur < tree->key) {
+        update_interval(tree->left, cur, other, op);
+    } else {
+        update_interval(tree->right, cur, other, op);
+    }
+    measure(tree);
+    return (0);
+}
+
+void print_interval_tree(m_tree_t *tree) {
+    if (tree == NULL || tree->left == NULL) {
+        printf("NULL\n");
+        return;
+    }
+    if (tree->right == NULL) {
+        printf("reaching leaf %d with min, max, measure and bound is: %d, %d, %d, (%d, %d)\n", 
+                tree->key, tree->leftmin, tree->rightmax, tree->measure, tree->left_endpoint, tree->right_endpoint);
+        return;
+    }
+    print_interval_tree(tree->left);
+    printf("internal node %d with leftmin, rightmax, measure and bound is: %d, %d, %d, (%d, %d)\n", 
+            tree->key, tree->leftmin, tree->rightmax, tree->measure, tree->left_endpoint, tree->right_endpoint);
+    print_interval_tree(tree->right);
+}
+
+void measure(m_tree_t *tree) {
+    if (tree == NULL) {
+        return;
+    }
+    // 5 cases to calculate measure for a leaf
+    if (tree->right == NULL) {
+        m_object_t *object = (m_object_t *)tree->left;
         tree->leftmin = tree_min(object->left_endpoints);
         tree->rightmax = tree_max(object->right_endpoints);
-        // 5 cases to calculate measure for a leaf
         if (tree->leftmin == INF || tree->rightmax == NINF) {
             // no endpoint left in the endpoint trees
             tree->leftmin = tree->left_endpoint;
@@ -248,25 +294,18 @@ int update_interval(m_tree_t *tree, int cur, int other, int op) {
         } else {
             tree->measure = tree->right_endpoint - tree->leftmin;
         }
-        return (0);
-    }
-    if (cur < tree->key) {
-        update_interval(tree->left, cur, other, op);
-    } else {
-        update_interval(tree->right, cur, other, op);
-    }
-    tree->leftmin = tree->left->leftmin < tree->right->leftmin ? tree->left->leftmin : tree->right->leftmin;
-    tree->rightmax = tree->left->rightmax > tree->right->rightmax ? tree->left->rightmax : tree->right->rightmax;
     // 4 cases to calculate measure for an interior node 
-    if (tree->right->leftmin < tree->left_endpoint && tree->left->rightmax >= tree->right_endpoint) {
-        tree->measure = tree->right_endpoint - tree->left_endpoint;
-    } else if (tree->right->leftmin >= tree->left_endpoint && tree->left->rightmax >= tree->right_endpoint) {
-        tree->measure = (tree->right_endpoint - tree->key) + tree->left->measure;
-    } else if (tree->right->leftmin < tree->left_endpoint && tree->left->rightmax < tree->right_endpoint) {
-        tree->measure = tree->right->measure + (tree->key - tree->left_endpoint);
     } else {
-        tree->measure = tree->left->measure + tree->right->measure;
+        tree->leftmin = tree->left->leftmin < tree->right->leftmin ? tree->left->leftmin : tree->right->leftmin;
+        tree->rightmax = tree->left->rightmax > tree->right->rightmax ? tree->left->rightmax : tree->right->rightmax;
+        if (tree->right->leftmin < tree->left_endpoint && tree->left->rightmax >= tree->right_endpoint) {
+            tree->measure = tree->right_endpoint - tree->left_endpoint;
+        } else if (tree->right->leftmin >= tree->left_endpoint && tree->left->rightmax >= tree->right_endpoint) {
+            tree->measure = (tree->right_endpoint - tree->key) + tree->left->measure;
+        } else if (tree->right->leftmin < tree->left_endpoint && tree->left->rightmax < tree->right_endpoint) {
+            tree->measure = tree->right->measure + (tree->key - tree->left_endpoint);
+        } else {
+            tree->measure = tree->left->measure + tree->right->measure;
+        }
     }
-
-    return (0);
 }

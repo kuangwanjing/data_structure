@@ -22,3 +22,4 @@ m_tree_t *create_m_tree();
 void insert_interval(m_tree_t *, int, int);
 void delete_interval(m_tree_t *, int, int);
 int query_length(m_tree_t *);
+void print_interval_tree(m_tree_t *);

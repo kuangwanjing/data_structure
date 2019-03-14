@@ -118,9 +118,12 @@ int _delete(tree_node_t *tree, int delete_key, tree_node_t *parent) {
             parent->left = other_node->left;
             parent->right = other_node->right;
             parent->height = other_node->height;
+            return_node(tree);
+            return_node(other_node);
+        } else {
+            // delete the root now, never release the node back to the free block
+            tree->left = NULL;
         }
-        return_node(tree);
-        return_node(other_node);
         return 0;
     }
     // the index of the key lies in the left subtree for the key is no more than the left subtree's sum
