@@ -1,30 +1,15 @@
-#include <stdio.h>
-
-/*definition and implementation of endpoint tree*/
-#define BLOCKSIZE 256
-#define INF 1000000
-#define NINF -1000000
-
-typedef struct tr_n_t {
-    int key;
-    struct tr_n_t * left;
-    struct tr_n_t * right;
-    int height;
-} tree_node_t;
-
-tree_node_t * create_tree(void); 
-int insert(tree_node_t *, int);
-int _delete(tree_node_t *, int , tree_node_t *); 
-void print(tree_node_t *);
-void rebalance(tree_node_t *);
-void left_rotation(tree_node_t *);
-void right_rotation(tree_node_t *);
+#include "endpoint_tree.h"
 
 tree_node_t * currentblock = NULL;
 int size_left;
 tree_node_t * free_list = NULL;
 int nodes_taken = 0;
 int nodes_returned = 0;
+
+void print(tree_node_t *);
+void rebalance(tree_node_t *);
+void left_rotation(tree_node_t *);
+void right_rotation(tree_node_t *);
 
 tree_node_t * get_node() {
     tree_node_t * tmp;
@@ -34,8 +19,7 @@ tree_node_t * get_node() {
         free_list = free_list->right;
     } else {
         if (currentblock == NULL || size_left == 0) {
-            currentblock =
-                (tree_node_t * ) malloc(BLOCKSIZE * sizeof(tree_node_t));
+            currentblock = malloc(BLOCKSIZE * sizeof(tree_node_t));
             size_left = BLOCKSIZE;
         }
         tmp = currentblock++;
@@ -154,38 +138,6 @@ int _delete(tree_node_t *tree, int delete_key, tree_node_t *parent) {
     return 0;
 }
 
-int tree_max(tree_node_t *tree) {
-    if (tree->left == NULL) {
-        return NINF;
-    }
-    tree_node_t *tmp_node;
-    tmp_node = tree;
-    while(tmp_node->right != NULL) {
-        if(tmp_node->right != NULL) {
-            tmp_node = tmp_node->right;
-        } else {
-            tmp_node = tmp_node->left;
-        }
-    }
-    return tmp_node->key;
-}
-
-int tree_min(tree_node_t *tree) {
-    if (tree->left == NULL) {
-        return INF;
-    }
-    tree_node_t *tmp_node;
-    tmp_node = tree;
-    while(tmp_node->right != NULL) {
-        if(tmp_node->left != NULL) {
-            tmp_node = tmp_node->left;
-        } else {
-            tmp_node = tmp_node->right;
-        }
-    }
-    return tmp_node->key;
-}
-
 void rebalance(tree_node_t *tree) {
     int tmp_height; 
     if (tree->left->height - tree->right->height == 2) {
@@ -261,58 +213,35 @@ void print(tree_node_t *tree) {
     printf("internal node with key and height: %d, %d\n", tree->key, tree->height);
     print(tree->right);
 }
-/*end of definition and implementation of basic tree*/
 
-/*defintion and implementation of measure tree*/
-/*
-typedef struct m_tree_t {
-    tree_node_t *tree; 
-} m_tree_t;
-
-typedef struct m_t {
-    int leftmin;
-    int rightmax;
-    int measure;
-    int endpoint1;
-    int endpoint2;
-} m_t;
-
-#define INF 1000000
-#define NINF -1000000
-
-typedef int object_t;
-m_tree_t *create_m_tree();
-void insert_interval(m_tree_t *, int, int);
-void delete_interval(m_tree_t *, int, int);
-int query_length(m_tree_t *);
-
-m_tree_t *create_m_tree() {
-    m_tree_t *mtree = (m_tree_t *)malloc(sizeof(m_tree_t));
-    mtree->tree = create_tree();
-    m_t *t = (m_t *)malloc(sizeof(m_t));
-    t->leftmin = INF;
-    t->rightmax = NINF;
-    t->measure = 0;
-    mtree->tree->other = (void*) t;
-    return mtree;
+int tree_max(tree_node_t *tree) {
+    if (tree->left == NULL) {
+        return NINF;
+    }
+    tree_node_t *tmp_node;
+    tmp_node = tree;
+    while(tmp_node->right != NULL) {
+        if(tmp_node->right != NULL) {
+            tmp_node = tmp_node->right;
+        } else {
+            tmp_node = tmp_node->left;
+        }
+    }
+    return tmp_node->key;
 }
-*/
-/*end of defintion and implementation of measure tree*/
 
-int main() {
-    //m_tree_t *measure_tree = create_m_tree(); 
-    //printf("%p\n", measure_tree->tree->other);
-    tree_node_t *t = create_tree();
-    insert(t, 2);
-    insert(t, 3);
-    insert(t, 4);
-    insert(t, 4);
-    insert(t, 4);
-    insert(t, 4);
-    //print(t);
-    _delete(t, 4, NULL);
-    //print(t);
-    insert(t, 1);
-    printf("the max is %d\n", tree_max(t));
-    printf("the min is %d\n", tree_min(t));
+int tree_min(tree_node_t *tree) {
+    if (tree->left == NULL) {
+        return INF;
+    }
+    tree_node_t *tmp_node;
+    tmp_node = tree;
+    while(tmp_node->right != NULL) {
+        if(tmp_node->left != NULL) {
+            tmp_node = tmp_node->left;
+        } else {
+            tmp_node = tmp_node->right;
+        }
+    }
+    return tmp_node->key;
 }
