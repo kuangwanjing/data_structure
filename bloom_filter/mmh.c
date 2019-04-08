@@ -3,8 +3,7 @@
 #include <stdlib.h>
 #include <time.h> 
 
-#define HASH_NUM 5
-#define ARR_NUM 8 
+#define HASH_NUM 8
 #define FILTER_SIZE 250000
 
 typedef struct {
@@ -16,29 +15,29 @@ bf_t* create_bf();
 void insert_bf(bf_t *b, char *s);
 int is_element(bf_t *b, char *q);
 
-int TMP[16000000] = {0};
+typedef unsigned uint32_t;
+typedef unsigned char uint8_t;
+typedef unsigned long long uint64_t;
 
-// modified murmur hash
-int murmur3_32(const char* key, size_t len, int seed) {
-    int h = seed;
-    int c = 0;
+uint32_t murmur3_32(const uint8_t* key, size_t len, uint32_t seed) {
+    uint32_t h = seed;
     if (len > 3) {
-        const int* key_x4 = (const int*) key;
+        const uint32_t* key_x4 = (const uint32_t*) key;
         size_t i = len >> 2;
         do {
-            int k = *key_x4++;
+            uint32_t k = *key_x4++;
             k *= 0xcc9e2d51;
-            //k = (k << 15) | (k >> 17);
+            k = (k << 15) | (k >> 17);
             k *= 0x1b873593;
             h ^= k;
-            //h = (h << 13) | (h >> 19);
+            h = (h << 13) | (h >> 19);
             h = h * 5 + 0xe6546b64;
         } while (--i);
-        key = (const char*) key_x4;
+        key = (const uint8_t*) key_x4;
     }
     if (len & 3) {
         size_t i = len & 3;
-        int k = 0;
+        uint32_t k = 0;
         key = &key[i - 1];
         do {
             k <<= 8;
@@ -58,8 +57,19 @@ int murmur3_32(const char* key, size_t len, int seed) {
     return h;
 }
 
+uint64_t fnv_1(const char *key) {
+    uint64_t hash = 0xcbf29ce484222325;
+    const char *k = key;
+    while (*k != 0) {
+        hash *= 0x100000001b3;
+        hash ^= (uint64_t)*k++;
+    }
+    return hash;
+}
+
 size_t fibonacci_hash_24_bits(size_t hash) {
-    return (hash * 11400714819323198485llu) >> 32;
+    //return (hash * 11400714819323198485llu) >> 40;
+    return (hash * 11400714819323198485llu);
 }
 
 bf_t *create_bf() {
@@ -67,11 +77,9 @@ bf_t *create_bf() {
     srand(time(0));
     bf_t *bf = malloc(sizeof(bf_t));
     bf->seeds = malloc(HASH_NUM * sizeof(int));
-    bf->filters = malloc(ARR_NUM * sizeof(char *));
+    bf->filters = malloc(HASH_NUM * sizeof(char *));
     for (i = 0; i < HASH_NUM; i++) {
         bf->seeds[i] = rand();
-    }
-    for (i = 0; i < ARR_NUM; i++) {
         bf->filters[i] = malloc(FILTER_SIZE * sizeof(char));
         memset(bf->filters[i], 0, FILTER_SIZE);
     }
@@ -79,37 +87,32 @@ bf_t *create_bf() {
 }
 
 void insert_bf(bf_t *b, char *s) {
-    int i, hash, arr, index, offset; 
-    char val;
+    int i; 
+    unsigned hash, index, offset;
+    unsigned long long tmp;
     for (i = 0; i < HASH_NUM; i++) {
         hash = murmur3_32(s, (unsigned)strlen(s), b->seeds[i]);
-        hash = fibonacci_hash_24_bits(hash) % (ARR_NUM * FILTER_SIZE * 8);
-        TMP[hash] = 1;
-        //printf("%d\n", hash % 16000000);
-        /*
-        arr = hash / (FILTER_SIZE * 8);
-        index = hash % (FILTER_SIZE * 8);
-        b->filters[arr][index/8] |= 1 << (index % 8);
-        */
+        tmp = fibonacci_hash_24_bits(hash);
+        index = tmp % (FILTER_SIZE * 8);
+        offset = index % 8;
+        b->filters[i][index / 8] |= 1 << offset;
+        //printf("%d, %d, %d\n", i, index, offset);
     }
 }
 
 int is_element(bf_t *b, char *q) {
-    int i, hash, arr, index, offset; 
-    char val;
+    int i; 
+    unsigned hash, index, offset;
+    unsigned long long tmp;
     for (i = 0; i < HASH_NUM; i++) {
         hash = murmur3_32(q, (unsigned)strlen(q), b->seeds[i]);
-        hash = fibonacci_hash_24_bits(hash) % (ARR_NUM * FILTER_SIZE * 8);
-        if (TMP[hash] == 0) {
+        tmp = fibonacci_hash_24_bits(hash);
+        index = tmp % (FILTER_SIZE * 8);
+        offset = index % 8;
+        //printf("%d, %d, %d\n", i, index, offset);
+        if ((int)(b->filters[i][index / 8] & (1 << offset)) == 0) {
             return 0;
         }
-        /*
-        arr = hash / (FILTER_SIZE * 8);
-        index = hash % (FILTER_SIZE * 8);
-        if ((int)(b->filters[arr][index/8] & (1 << (index % 8))) == 0) {
-            return 0;
-        }
-        */
     }
     return 1;
 }
@@ -218,24 +221,19 @@ int main()
    printf("Found %d positive errors out of 1,000,000 tests.\n",j);
    printf("Positive error rate %f\%.\n", (float)j/10000.0);
     
+   /*
     int c = 0;
     int k;
-    /*
     for (i = 0; i < 8; i++) {
         for (j = 0; j < FILTER_SIZE; j++) {
             char tmp = bloom->filters[i][j];
-            for (k = 0; k < 4; k++) {
+            for (k = 0; k < 8; k++) {
                 if ((int)(tmp & 1 << k) != 0) {
                     c++;
                 }
             }
         }
     }
-    */
-    for (i = 0; i < 16000000; i++) {
-        if (TMP[i] == 1) {
-            c++;
-        }
-    }
     printf("not zero is %d\n", c);
+    */
 }
