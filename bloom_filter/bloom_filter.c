@@ -68,7 +68,6 @@ uint64_t fnv_1(const char *key) {
 }
 
 size_t fibonacci_hash_24_bits(size_t hash) {
-    //return (hash * 11400714819323198485llu) >> 40;
     return (hash * 11400714819323198485llu);
 }
 
@@ -96,7 +95,6 @@ void insert_bf(bf_t *b, char *s) {
         index = tmp % (FILTER_SIZE * 8);
         offset = index % 8;
         b->filters[i][index / 8] |= 1 << offset;
-        //printf("%d, %d, %d\n", i, index, offset);
     }
 }
 
@@ -109,7 +107,6 @@ int is_element(bf_t *b, char *q) {
         tmp = fibonacci_hash_24_bits(hash);
         index = tmp % (FILTER_SIZE * 8);
         offset = index % 8;
-        //printf("%d, %d, %d\n", i, index, offset);
         if ((int)(b->filters[i][index / 8] & (1 << offset)) == 0) {
             return 0;
         }
@@ -220,20 +217,4 @@ int main()
    }
    printf("Found %d positive errors out of 1,000,000 tests.\n",j);
    printf("Positive error rate %f\%.\n", (float)j/10000.0);
-    
-   /*
-    int c = 0;
-    int k;
-    for (i = 0; i < 8; i++) {
-        for (j = 0; j < FILTER_SIZE; j++) {
-            char tmp = bloom->filters[i][j];
-            for (k = 0; k < 8; k++) {
-                if ((int)(tmp & 1 << k) != 0) {
-                    c++;
-                }
-            }
-        }
-    }
-    printf("not zero is %d\n", c);
-    */
 }
